@@ -169,3 +169,61 @@ grafico_dispersion <- ggplot(datos_clientes,
 
 # Muestro el gráfico
 print(grafico_dispersion)
+
+
+#EJERCICIO 4
+
+# Selecciono solo las variables numéricas del dataset (excluyendo ID)
+datos_numericos <- datos_clientes %>%
+  select(ultima_compra_dias, Frecuencia, ComprasTotal, 
+         CompraMinima, CompraPromedio) %>%
+  # Aseguro que todas son numéricas
+  mutate_all(as.numeric)
+
+# Verifico la estructura de los datos
+str(datos_numericos)
+
+# CalculO la matriz de correlación de Spearman
+matriz_correlacion <- cor(datos_numericos, method = "spearman", use = "complete.obs")
+
+# Matriz de correlación con 3 decimales.
+print(round(matriz_correlacion, 3))
+
+
+# Uso distancia euclidiana ya que es la medida de distancia mas usanda entre las medidas de disimilitud ya aprovechando que los datos yalos escale anteriormente.
+dist_matriz <- dist(datos_escalados, method = "euclidean")
+
+# Aplico agrupamiento jerárquico con diferentes métodos de vinculación, seleccione este metodo por que se puede representar los puntos en un espacio euclidiano lo que lo vinvula con la metrica de distancia(euclidiana)
+hc_ward <- hclust(dist_matriz, method = "ward.D2")
+
+#Creo el dendrograma simple
+plot(hc_ward, 
+     main = "Dendrograma - Método Ward.D2", 
+     sub = "", 
+     xlab = "")
+
+## como se nota el dendograma en este caso debido a la cantidad de datos queda sucio, por ende para mejorarlo 
+
+
+# eliminare algunas etiquetas para limpiarlo, trabajaer con k 4 deacuerdo a mi eleccion
+plot(hc_ward, main = "Dendrograma sin etiquetas", labels = FALSE)
+rect.hclust(hc_ward, k = 4, border = "red")
+
+# es dificil detectar los grupos de variables qe pueden estar realcionadas, por ende cambio estructura del dendograma para idetinficarlas.
+#Convierto correlaciones en distancias
+
+# Aplico clustering jerárquico a las VARIABLES
+hc_variables <- hclust(dist_variables, method = "complete")
+
+#Visualizo el dendrograma de VARIABLES
+plot(hc_variables, 
+     main = "Dendrograma de Variables Correlacionadas", 
+     xlab = "")
+
+# Añado líneas para identificar grupos
+rect.hclust(hc_variables, k = 4, border = "blue")
+
+# Identifico los grupos de variables
+grupos_variables <- cutree(hc_variables, k = 3)
+print("Agrupación de variables en clusters:")
+print(grupos_variables)
