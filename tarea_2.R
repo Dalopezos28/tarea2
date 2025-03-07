@@ -227,3 +227,110 @@ rect.hclust(hc_variables, k = 4, border = "blue")
 grupos_variables <- cutree(hc_variables, k = 3)
 print("Agrupación de variables en clusters:")
 print(grupos_variables)
+
+
+#Ejercicio 5
+
+# Verifico los países únicos y su frecuencia
+tabla_frecuencia <- table(datos_clientes$Pais)
+print("Frecuencia de países en el dataset:")
+print(tabla_frecuencia)
+
+# Codificación por orden alfabético
+datos_clientes$Pais_numerico <- as.numeric(factor(datos_clientes$Pais))
+
+# Muestro la correspondencia entre país y número
+correspondencia <- data.frame(
+  Pais = levels(factor(datos_clientes$Pais)),
+  Codigo = 1:length(levels(factor(datos_clientes$Pais)))
+)
+print("Correspondencia entre países y códigos numéricos:")
+print(correspondencia)
+
+# Verifico que la conversión se haya realizado correctamente
+print("Primeras filas con la nueva variable numérica:")
+head(datos_clientes[, c("CustomerID", "Pais", "Pais_numerico")])
+
+
+# pñara el segundo punto del ejercicio 5 tomo como parametro (3 meses = 90 días)
+umbral_abandono <- 90
+
+
+# Creo la variable Churn basada en el criterio de los 3 meses, si el cliente lleva mas de 3 meses se asignara 1,de lo contrario 0.
+datos_clientes <- datos_clientes %>%
+  mutate(Churn = ifelse(ultima_compra_dias > umbral_abandono, 1, 0))
+
+# Convierto Churn a factor para que se considere categórica
+datos_clientes$Churn <- as.factor(datos_clientes$Churn)
+
+# Verifico cuántos clientes están en cada categoría
+head((datos_clientes))
+
+
+# Establezco una semilla para reproducibilidad
+set.seed(123)
+
+# Defino la proporción para el conjunto de entrenamiento (80%)
+proporcion_entrenamiento <- 0.8
+
+# Calculo cuántas observaciones irán al conjunto de entrenamiento
+n_entrenamiento <- round(nrow(datos_clientes) * proporcion_entrenamiento)
+
+# Genero índices aleatorios para seleccionar las observaciones de entrenamiento
+indices_entrenamiento <- sample(1:nrow(datos_clientes), n_entrenamiento)
+
+# Divido el dataset en entrenamiento y prueba
+datos_entrenamiento <- datos_clientes[indices_entrenamiento, ]
+datos_prueba <- datos_clientes[-indices_entrenamiento, ]
+
+
+# Verifico las dimensiones de los conjuntos resultantes
+cat("Dimensiones del conjunto de datos original:", dim(datos_clientes), "\n")
+cat("Dimensiones del conjunto de entrenamiento:", dim(datos_entrenamiento), "\n")
+cat("Dimensiones del conjunto de prueba:", dim(datos_prueba), "\n")
+cat("Proporción de entrenamiento:", round(nrow(datos_entrenamiento)/nrow(datos_clientes)*100, 1), "%\n\n")
+
+# Cargo la librería necesaria para SVM
+library(e1071)
+
+# Aseguro que la variable Churn sea factor
+datos_train$Churn <- as.factor(datos_train$Churn)
+datos_test$Churn <- as.factor(datos_test$Churn)
+
+# Selecciono y escalo las variables predictoras
+variables <- c("ultima_compra_dias", "Frecuencia", "ComprasTotal")
+
+# Escalo las variables (importante para SVM)
+datos_train_scale <- datos_train
+datos_test_scale <- datos_test
+
+for (var in variables) {
+  # Obtengo media y desviación de entrenamiento
+  media <- mean(datos_train[[var]], na.rm = TRUE)
+  desv <- sd(datos_train[[var]], na.rm = TRUE)
+  
+  # Aplico el mismo escalado a ambos conjuntos
+  datos_train_scale[[var]] <- (datos_train[[var]] - media) / desv
+  datos_test_scale[[var]] <- (datos_test[[var]] - media) / desv
+}
+
+# Construyo el modelo SVM
+modelo_svm <- svm(
+  Churn ~ ultima_compra_dias + Frecuencia + ComprasTotal,
+  data = datos_train_scale,
+  kernel = "radial",     # Kernel radial (no lineal)
+  cost = 1,              # Parámetro de regularización
+  probability = TRUE     # Para obtener probabilidades
+)
+
+# Resumen del modelo
+print(modelo_svm)
+
+# Predicciones en conjunto de prueba
+predicciones <- predict(modelo_svm, datos_test_scale)
+
+# Evaluación simple: matriz de confusión y precisión
+tabla <- table(Predicho = predicciones, Real = datos_test$Churn)
+print(tabla)
+
+
